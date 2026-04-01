@@ -33,6 +33,7 @@ class EversoloApiClient:
         self._host = host
         self._port = port
         self._session = session
+        self._has_knob_color: bool | None = None
 
     async def async_get_data(self, previous_data: dict | None = None):
         """Get data from the API."""
@@ -48,6 +49,12 @@ class EversoloApiClient:
             "spectrum_mode_state": self.async_get_spectrum_state,
             "is_display_on": self.async_get_display_state,
         }
+
+        if self._has_knob_color is None:
+            self._has_knob_color = await self.async_has_knob_color()
+
+        if self._has_knob_color:
+            fetchers["knob_color_state"] = self.async_get_knob_color_state
 
         result = {}
         for key, fetcher in fetchers.items():
@@ -284,6 +291,39 @@ class EversoloApiClient:
             method="get",
             url=f"http://{self._host}:{
                 self._port}/SystemSettings/displaySettings/setSpPlayModeList?index={index}",
+            parseJson=False,
+        )
+
+    async def async_has_knob_color(self) -> bool:
+        """Check if the device supports knob color control."""
+        try:
+            result = await self._api_wrapper(
+                method="get",
+                url=f"http://{self._host}:{
+                    self._port}/SystemSettings/displaySettings/getKnobSettingOption",
+            )
+            items = result.get("items", [])
+            return any(
+                item.get("tag") == "SettingsItemTagKnobLightColorList"
+                for item in items
+            )
+        except EversoloApiClientError:
+            return False
+
+    async def async_get_knob_color_state(self):
+        """Return the knob color list and current selection."""
+        return await self._api_wrapper(
+            method="get",
+            url=f"http://{self._host}:{
+                self._port}/SystemSettings/displaySettings/getKnobLightColorList",
+        )
+
+    async def async_select_knob_color_option(self, index, tag) -> any:
+        """Select the knob light color."""
+        await self._api_wrapper(
+            method="get",
+            url=f"http://{self._host}:{
+                self._port}/SystemSettings/displaySettings/setKnobLightColor?index={index}",
             parseJson=False,
         )
 
