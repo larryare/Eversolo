@@ -81,17 +81,36 @@ ENTITY_DESCRIPTIONS = [
     ),
 ]
 
+KNOB_COLOR_DESCRIPTION = EversoloSelectDescription[EversoloDataUpdateCoordinator](
+    key="knob_color",
+    name="Knob Color",
+    icon="mdi:palette",
+    get_selected_option=lambda coordinator: coordinator.data.get(
+        "knob_color_state", {}
+    ).get("currentIndex", -1),
+    get_available_options=lambda coordinator: coordinator.data.get(
+        "knob_color_state", {}
+    ).get("data", None),
+    select_option=lambda coordinator, index, tag: coordinator.client.async_select_knob_color_option(
+        index, tag
+    ),
+)
+
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Set up the Select platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
+
+    descriptions = list(ENTITY_DESCRIPTIONS)
+    if "knob_color_state" in coordinator.data:
+        descriptions.append(KNOB_COLOR_DESCRIPTION)
 
     async_add_devices(
         EversoloSelect(
             coordinator=coordinator,
             entity_description=entity_description,
         )
-        for entity_description in ENTITY_DESCRIPTIONS
+        for entity_description in descriptions
     )
 
 
