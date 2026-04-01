@@ -8,7 +8,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import EversoloApiClient
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN, LOGGER, NAME
 from .coordinator import EversoloDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [
@@ -17,6 +17,37 @@ PLATFORMS: list[Platform] = [
     Platform.MEDIA_PLAYER,
     Platform.SELECT,
 ]
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate config entry to a new version."""
+    LOGGER.debug("Migrating from version %s", entry.version)
+
+    if entry.version == 1:
+        # Version 2: Update title from host IP to "Eversolo {model}" for proper
+        # device naming with _attr_has_entity_name = True.
+        title = NAME
+        try:
+            client = EversoloApiClient(
+                host=entry.data[CONF_HOST],
+                port=entry.data[CONF_PORT],
+                session=async_get_clientsession(hass),
+            )
+            device_info = await client.async_get_device_model()
+            model = device_info.get("model")
+            if model:
+                title = f"{NAME} {model}"
+        except Exception as exception:
+            LOGGER.warning(
+                "Could not fetch device model during migration, "
+                "using default title: %s",
+                exception,
+            )
+
+        hass.config_entries.async_update_entry(entry, title=title, version=2)
+        LOGGER.info("Migration to version 2 successful, title set to '%s'", title)
+
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
