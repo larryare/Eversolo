@@ -30,6 +30,7 @@ It provides the following entities:
 | Light         | Display                      | Controls display brightness                                                   |
 | Light         | Knob                         | Controls knob brightness                                                      |
 | Media Player  | Eversolo                     | Media controls                                                                |
+| Select        | Knob Color                   | Selects knob light color (only on supported devices)                          |
 | Select        | Output Mode                  | Selects between available outputs                                             |
 | Select        | Spectrum Style               | Selects between the 4 available Spectrum styles                               |
 | Select        | VU Style                     | Selects between the 4 available VU styles                                     |
