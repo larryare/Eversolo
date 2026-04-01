@@ -34,17 +34,29 @@ class EversoloApiClient:
         self._port = port
         self._session = session
 
-    async def async_get_data(self):
+    async def async_get_data(self, previous_data: dict | None = None):
         """Get data from the API."""
-        result = {
-            "display_brightness": await self.async_get_display_brightness(),
-            "input_output_state": await self.async_get_input_output_state(),
-            "knob_brightness": await self.async_get_knob_brightness(),
-            "music_control_state": await self.async_get_music_control_state(),
-            "vu_mode_state": await self.async_get_vu_mode_state(),
-            "spectrum_mode_state": await self.async_get_spectrum_state(),
-            "is_display_on": await self.async_get_display_state(),
+        if previous_data is None:
+            previous_data = {}
+
+        fetchers = {
+            "display_brightness": self.async_get_display_brightness,
+            "input_output_state": self.async_get_input_output_state,
+            "knob_brightness": self.async_get_knob_brightness,
+            "music_control_state": self.async_get_music_control_state,
+            "vu_mode_state": self.async_get_vu_mode_state,
+            "spectrum_mode_state": self.async_get_spectrum_state,
+            "is_display_on": self.async_get_display_state,
         }
+
+        result = {}
+        for key, fetcher in fetchers.items():
+            try:
+                result[key] = await fetcher()
+            except EversoloApiClientCommunicationError:
+                LOGGER.warning("Timeout fetching %s, using previous value", key)
+                result[key] = previous_data.get(key)
+
         LOGGER.debug("Fetched data from API: %s", result)
         return result
 
@@ -394,7 +406,7 @@ class EversoloApiClient:
     ) -> any:
         """Get information from the API."""
         try:
-            async with async_timeout.timeout(10):
+            async with async_timeout.timeout(5):
                 response = await self._session.request(
                     method=method,
                     url=url,
@@ -413,7 +425,7 @@ class EversoloApiClient:
 
         except TimeoutError as exception:
             raise EversoloApiClientCommunicationError(
-                "Timeout error fetching information",
+                f"Timeout error fetching information from {url}",
             ) from exception
         except (aiohttp.ClientError, socket.gaierror) as exception:
             raise EversoloApiClientCommunicationError(

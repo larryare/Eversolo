@@ -51,7 +51,7 @@ class EversoloDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Update data via library."""
         try:
-            data = await self.client.async_get_data()
+            data = await self.client.async_get_data(previous_data=self.data)
 
             if not all(
                 key in self.config_entry.data
