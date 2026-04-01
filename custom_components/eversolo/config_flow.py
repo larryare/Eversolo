@@ -20,7 +20,7 @@ from .const import DEFAULT_PORT, DOMAIN, LOGGER, NAME
 class EversoloFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Eversolo."""
 
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(
         self,
@@ -46,7 +46,8 @@ class EversoloFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 try:
                     device_info = await client.async_get_device_model()
                     model = device_info.get("model")
-                except Exception:
+                except Exception as exception:
+                    LOGGER.warning("Failed to fetch device model: %s", exception)
                     model = None
                 title = f"{NAME} {model}" if model else NAME
                 return self.async_create_entry(
