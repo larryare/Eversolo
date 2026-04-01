@@ -57,19 +57,21 @@ class EversoloApiClient:
             fetchers["knob_color_state"] = self.async_get_knob_color_state
 
         result = {}
-        failures = 0
+        failed_keys = []
         for key, fetcher in fetchers.items():
             try:
                 result[key] = await fetcher()
             except EversoloApiClientCommunicationError:
-                LOGGER.warning("Timeout fetching %s, using previous value", key)
                 result[key] = previous_data.get(key)
-                failures += 1
+                failed_keys.append(key)
 
-        if failures == len(fetchers):
+        if len(failed_keys) == len(fetchers):
             raise EversoloApiClientCommunicationError(
                 "All API requests failed, device appears to be offline"
             )
+
+        for key in failed_keys:
+            LOGGER.warning("Timeout fetching %s, using previous value", key)
 
         LOGGER.debug("Fetched data from API: %s", result)
         return result
